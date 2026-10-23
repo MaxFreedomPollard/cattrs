@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import MISSING
+from enum import Enum
 from functools import reduce
 from operator import or_
 from typing import TYPE_CHECKING, Any, Callable, Literal, Union, get_origin
@@ -93,7 +94,9 @@ def create_default_dis_func(
 
             for cl, candidates in zip(classes, cls_candidates):
                 for key in get_args(candidates[discriminator].type):
-                    mapping[key].append(cl)
+                    # Enum members are unstructured into their values, so the
+                    # payload contains the value.
+                    mapping[key.value if isinstance(key, Enum) else key].append(cl)
 
             if best_result is None or max(len(v) for v in mapping.values()) <= max(
                 len(v) for v in best_result.values()

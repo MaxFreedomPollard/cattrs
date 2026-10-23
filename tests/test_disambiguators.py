@@ -1,6 +1,7 @@
 """Tests for auto-disambiguators."""
 
 from dataclasses import dataclass
+from enum import Enum
 from functools import partial
 from itertools import permutations
 from typing import Literal, Union
@@ -284,6 +285,33 @@ def test_disambiguate_from_discriminated_enum():
     fn = create_default_dis_func(c, H, J, K)
     assert fn({"a": 1}) == Union[H, J]
     assert fn({"a": 0}) == Union[J, K]
+
+
+def test_enum_literal_discriminators(converter):
+    """Literal discriminators containing enum members match on the enum values.
+
+    Enum members are unstructured into their values, so that is what a payload
+    contains. The discriminator used to be looked up by enum member instead,
+    which raised a `KeyError` unless the members hash and compare like their
+    values, as they do for `str` and `int` enums but not for plain ones.
+    """
+
+    class Kind(Enum):
+        A = "a"
+        B = "b"
+
+    @define
+    class A:
+        kind: Literal[Kind.A]
+
+    @define
+    class B:
+        kind: Literal[Kind.B]
+
+    for instance in (A(Kind.A), B(Kind.B)):
+        payload = converter.unstructure(instance)
+        assert payload == {"kind": instance.kind.value}
+        assert converter.structure(payload, Union[A, B]) == instance
 
 
 def test_default_no_literals():
